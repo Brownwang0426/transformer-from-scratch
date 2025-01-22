@@ -145,16 +145,10 @@ class build_model(nn.Module):
         # Loss function
         losses = {
             'mean_squared_error': torch.nn.MSELoss(),
-            'binary_crossentropy': torch.nn.BCELoss()
+            'binary_crossentropy': torch.nn.BCELoss(),
+            'crossentropy': torch.nn.CrossEntropyLoss()
         }
         self.loss_function = losses[self.loss .lower()]
-
-        # Loss function
-        losses = {
-            'mean_squared_error': torch.nn.MSELoss(reduction='none'),
-            'binary_crossentropy': torch.nn.BCELoss(reduction='none')
-        }
-        self.loss_function_ = losses[self.loss .lower()]
 
 
     def forward(self, x, mask):
@@ -169,7 +163,8 @@ class build_model(nn.Module):
             h  = fully_connected_norm_layer(h + h_)
 
         h  = h.view(h.size(0), -1)
-        o  = self.output_linear(h)   
+        h  = self.output_linear(h)  
+        o  = self.output_activation(h) * 10
 
         return o
 
