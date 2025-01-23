@@ -119,9 +119,9 @@ class build_model(nn.Module):
         nn.ModuleList([
             nn.ModuleList([
                 custom_attn(self.feature_size, self.num_heads),
-                nn.LayerNorm(self.feature_size),
+                nn.LayerNorm(self.feature_size, elementwise_affine=False),
                 nn.Linear(self.feature_size, self.feature_size, bias=self.bias),
-                nn.LayerNorm(self.feature_size)
+                nn.LayerNorm(self.feature_size, elementwise_affine=False)
             ])
             for _ in range(self.num_layers)
         ])
