@@ -88,6 +88,7 @@ class build_model(nn.Module):
     def __init__(self,
                  sequence_size,
                  feature_size,
+                 output_size,
                  num_layers,
                  num_heads,
                  hidden_activation,
@@ -103,6 +104,7 @@ class build_model(nn.Module):
 
         self.sequence_size        = sequence_size
         self.feature_size         = feature_size
+        self.output_size          = output_size
         self.num_layers           = num_layers
         self.num_heads            = num_heads
         self.hidden_activation    = hidden_activation
@@ -125,7 +127,7 @@ class build_model(nn.Module):
             ])
             for _ in range(self.num_layers)
         ])
-        self.output_linear     = nn.Linear(self.sequence_size * self.feature_size, self.feature_size , bias=self.bias)
+        self.output_linear     = nn.Linear(self.feature_size, self.output_size , bias=self.bias)
 
         # Activation functions
         self.hidden_activation = self.get_activation(self.hidden_activation)
@@ -162,9 +164,10 @@ class build_model(nn.Module):
             h_ = fully_connected_layer(h)
             h  = fully_connected_norm_layer(h + h_)
 
-        h  = h.view(h.size(0), -1)
+        last_idx = mask[1][0, 0, 0, :].sum() - 1 
+        h  = h[:, last_idx, :]
         h  = self.output_linear(h)  
-        o  = self.output_activation(h) * 10
+        o  = self.output_activation(h) 
 
         return o
 
@@ -183,7 +186,8 @@ class build_model(nn.Module):
             'relu': nn.ReLU(),
             'leaky_relu': nn.LeakyReLU(),
             'sigmoid': nn.Sigmoid(),
-            'tanh': nn.Tanh()
+            'tanh': nn.Tanh(),
+            'softmax': nn.Softmax(dim=-1)
         }
         return activations[ activation.lower()]
 
