@@ -148,7 +148,8 @@ class build_model(nn.Module):
         losses = {
             'mean_squared_error': torch.nn.MSELoss(),
             'binary_crossentropy': torch.nn.BCELoss(),
-            'crossentropy': torch.nn.CrossEntropyLoss()
+            'crossentropy': torch.nn.CrossEntropyLoss(),
+            'kl_loss': nn.KLDivLoss()
         }
         self.loss_function = losses[self.loss .lower()]
 
