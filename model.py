@@ -167,12 +167,12 @@ class build_model(nn.Module):
 
         last_idx = mask[1][0, 0, 0, :].sum() - 1 
         h  = h[:, last_idx, :]
-        h  = self.output_linear(h)  
-        o  = self.output_activation(h) 
-
+        o  = self.output_linear(h)  
+        # When using PyTorch's torch.nn.CrossEntropyLoss, you do not need to apply any activation function (e.g., softmax) in the last layer
+        # o  = self.output_activation(h) 
         return o
 
-
+    
     def generate_positional_encoding(self, sequence_size, feature_size):
         pe = torch.zeros(sequence_size,feature_size)
         for pos in range(sequence_size):
