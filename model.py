@@ -171,6 +171,9 @@ class build_model(nn.Module):
         h  = self.output_linear(h)  
         o  = self.output_activation(h) 
         o  = torch.log(o)
+
+        # 這邊我們故意不用  torch.nn.CrossEntropyLoss
+        # 因為 torch.nn.CrossEntropyLoss = softmax + log + negative-likelihood-loss
         
         return o
 
