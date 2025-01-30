@@ -166,7 +166,7 @@ class build_model(nn.Module):
             h_ = fully_connected_layer(h)
             h  = fully_connected_norm_layer(h + h_)
 
-        last_idx = mask[1][0, 0, 0, :].sum() - 1 
+        last_idx = mask[1][0, 0, 0, :].long().sum() - 1 
         h  = h[:, last_idx, :]
         h  = self.output_linear(h)  
         o  = self.output_activation(h) 
