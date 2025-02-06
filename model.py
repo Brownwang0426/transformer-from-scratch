@@ -55,7 +55,7 @@ class custom_attn(nn.Module):
         attn_scores = torch.matmul(Q, K.transpose(-2, -1)) / (self.head_size ** 0.5) #  (batch_size, num_heads, sequence_size, head_size) @ (batch_size, num_heads, head_size, sequence_size ) 
         
         if mask_1 != None:
-            attn_scores += mask_1                                # (batch_size, num_heads, sequence_size, sequence_size) += (batch_size, 1, sequence_size, sequence_size)
+            attn_scores += mask_1                                    # (batch_size, num_heads, sequence_size, sequence_size) += (batch_size, 1, sequence_size, sequence_size)
         else:
             attn_scores += 0
 
@@ -156,8 +156,12 @@ class build_model(nn.Module):
 
 
     def forward(self, x, mask):
+
+        original_length = mask[1][0, 0, 0, :].long().sum()
         
-        h  = x + self.positional_encoding
+        x[:,  :original_length, :] = x[:,  :original_length, :] + self.positional_encoding[:,  :original_length, :]
+
+        h = x
 
         for i, layer in enumerate(self.transformer_layers):
             attention_layer, attention_norm_layer, fully_connected_layer, fully_connected_norm_layer = layer
@@ -166,7 +170,7 @@ class build_model(nn.Module):
             h_ = fully_connected_layer(h)
             h  = fully_connected_norm_layer(h + h_)
 
-        last_idx = mask[1][0, 0, 0, :].long().sum() - 1 
+        last_idx = original_length - 1 
         h  = h[:, last_idx, :]
         h  = self.output_linear(h)  
         o  = self.output_activation(h) 
