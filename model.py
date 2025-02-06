@@ -59,10 +59,7 @@ class custom_attn(nn.Module):
         else:
             attn_scores += 0
 
-        if mask_2 != None:
-            attn_probs = torch.softmax(attn_scores, dim=-1) * mask_2 # (batch_size, num_heads, sequence_size, sequence_size) * (batch_size, 1, sequence_size, sequence_size)
-        else:
-            attn_probs = torch.softmax(attn_scores, dim=-1) 
+        attn_probs = torch.softmax(attn_scores, dim=-1) 
 
         output     = torch.matmul(attn_probs, V)  # (batch_size, num_heads, sequence_size, sequence_size) @ (batch_size, num_heads, sequence_size, head_size ) 
         return output                             # (batch_size, num_heads, sequence_size, head_size)
@@ -121,9 +118,9 @@ class build_model(nn.Module):
         nn.ModuleList([
             nn.ModuleList([
                 custom_attn(self.feature_size, self.num_heads),
-                nn.LayerNorm(self.feature_size, elementwise_affine=False),
+                nn.LayerNorm(self.feature_size, elementwise_affine=True),
                 nn.Linear(self.feature_size, self.feature_size, bias=self.bias),
-                nn.LayerNorm(self.feature_size, elementwise_affine=False)
+                nn.LayerNorm(self.feature_size, elementwise_affine=True)
             ])
             for _ in range(self.num_layers)
         ])
@@ -159,9 +156,7 @@ class build_model(nn.Module):
 
         original_length = mask[1][0, 0, 0, :].long().sum()
         
-        x[:,  :original_length, :] = x[:,  :original_length, :] + self.positional_encoding[:,  :original_length, :]
-
-        h = x
+        h = x + self.positional_encoding
 
         for i, layer in enumerate(self.transformer_layers):
             attention_layer, attention_norm_layer, fully_connected_layer, fully_connected_norm_layer = layer
