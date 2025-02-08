@@ -163,7 +163,7 @@ class build_model(nn.Module):
         h = x + self.positional_encoding
 
         for i, layer in enumerate(self.transformer_layers):
-            attention_layer, attention_norm_layer, fully_connected_layer, fully_connected_norm_layer = layer
+            attention_norm_layer, attention_layer, fully_connected_norm_layer, fully_connected_layer = layer
             h_  = attention_norm_layer(h)
             h   = h + attention_layer(h_, h_, h_, mask)
             h_  = fully_connected_norm_layer(h)
