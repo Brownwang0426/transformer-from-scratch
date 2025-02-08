@@ -46,7 +46,8 @@ class custom_attn(nn.Module):
         self.W_v           = nn.Linear(feature_size, feature_size, bias=self.bias)
         self.W_o           = nn.Linear(feature_size, feature_size, bias=self.bias)
         self.attn_dropout  = nn.Dropout(drop_rate)
-        
+        self.resid_dropout = nn.Dropout(drop_rate)
+
     def split_heads(self, x):
         batch_size, sequence_size, feature_size = x.size()
         return x.view(batch_size, sequence_size, self.num_heads, self.head_size).transpose(1, 2)
@@ -63,6 +64,7 @@ class custom_attn(nn.Module):
         attn_probs = torch.softmax(attn_scores, dim=-1) 
         attn_probs = self.attn_dropout (attn_probs)
         output     = torch.matmul(attn_probs, V)  # (batch_size, num_heads, sequence_size, sequence_size) @ (batch_size, num_heads, sequence_size, head_size ) 
+        output     = self.resid_dropout(output)
         return output                             # (batch_size, num_heads, sequence_size, head_size)
 
     def combine_heads(self, x):
@@ -118,16 +120,15 @@ class build_model(nn.Module):
         self.transformer_layers   = \
         nn.ModuleList([
             nn.ModuleList([
+                nn.LayerNorm(self.feature_size, elementwise_affine=True),
                 custom_attn(self.feature_size, self.num_heads, self.drop_rate, self.bias),
                 nn.LayerNorm(self.feature_size, elementwise_affine=True),
-                nn.Linear(self.feature_size, self.feature_size, bias=self.bias),
-                nn.LayerNorm(self.feature_size, elementwise_affine=True)
+                nn.Linear(self.feature_size, self.feature_size, bias=self.bias)
             ])
             for _ in range(self.num_layers)
         ])
+        self.norm_layer        = nn.LayerNorm(self.hidden_neuron_size, elementwise_affine=True) 
         self.output_linear     = nn.Linear(self.feature_size, self.output_size , bias=self.bias)
-        
-        self.resid_dropout     = nn.Dropout(drop_rate)
 
         # Activation functions
         self.hidden_activation = self.get_activation(self.hidden_activation)
@@ -163,13 +164,13 @@ class build_model(nn.Module):
 
         for i, layer in enumerate(self.transformer_layers):
             attention_layer, attention_norm_layer, fully_connected_layer, fully_connected_norm_layer = layer
-            h_ = attention_layer(h, h, h, mask)
-            h_ = self.resid_dropout(h_)
-            h  = attention_norm_layer(h + h_)
-            h_ = fully_connected_layer(h)
-            h_ = self.resid_dropout(h_)
-            h  = fully_connected_norm_layer(h + h_)
-
+            h_  = attention_norm_layer(h)
+            h   = h + attention_layer(h_, h_, h_, mask)
+            h_  = fully_connected_norm_layer(h)
+            h   = h + fully_connected_layer(h_)
+            
+        h = self.norm_layer(h)
+        
         last_idx = original_length - 1 
         h  = h[:, last_idx, :]
         h  = self.output_linear(h)  
