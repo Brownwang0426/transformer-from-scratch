@@ -127,7 +127,7 @@ class build_model(nn.Module):
             ])
             for _ in range(self.num_layers)
         ])
-        self.norm_layer        = nn.LayerNorm(self.hidden_neuron_size, elementwise_affine=True) 
+        self.norm_layer        = nn.LayerNorm(self.feature_size, elementwise_affine=True) 
         self.output_linear     = nn.Linear(self.feature_size, self.output_size , bias=self.bias)
 
         # Activation functions
@@ -169,7 +169,7 @@ class build_model(nn.Module):
             h_  = fully_connected_norm_layer(h)
             h   = h + fully_connected_layer(h_)
             
-        h = self.norm_layer(h)
+        h  = self.norm_layer(h)
         
         last_idx = original_length - 1 
         h  = h[:, last_idx, :]
