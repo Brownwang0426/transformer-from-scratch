@@ -64,7 +64,6 @@ class custom_attn(nn.Module):
         attn_probs = torch.softmax(attn_scores, dim=-1) 
         attn_probs = self.attn_dropout (attn_probs)
         output     = torch.matmul(attn_probs, V)  # (batch_size, num_heads, sequence_size, sequence_size) @ (batch_size, num_heads, sequence_size, head_size ) 
-        output     = self.resid_dropout(output)
         return output                             # (batch_size, num_heads, sequence_size, head_size)
 
     def combine_heads(self, x):
@@ -79,6 +78,7 @@ class custom_attn(nn.Module):
         V    = self.split_heads(self.W_v(V))  # Shape: (batch_size, num_heads, sequence_size, head_size )
         attn_output = self.scaled_dot_product_attention(Q, K, V, mask)
         output      = self.W_o(self.combine_heads(attn_output))
+        output      = self.resid_dropout(output)
         return output
 
 
