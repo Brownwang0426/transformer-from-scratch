@@ -53,11 +53,11 @@ class custom_attn(nn.Module):
         return x.view(batch_size, sequence_size, self.num_heads, self.head_size).transpose(1, 2)
 
     def scaled_dot_product_attention(self, Q, K, V, mask):
-        mask_1, mask_2 = mask
+
         attn_scores = torch.matmul(Q, K.transpose(-2, -1)) / (self.head_size ** 0.5) #  (batch_size, num_heads, sequence_size, head_size) @ (batch_size, num_heads, head_size, sequence_size ) 
         
-        if mask_1 != None:
-            attn_scores += mask_1                                    # (batch_size, num_heads, sequence_size, sequence_size) += (batch_size, 1, sequence_size, sequence_size)
+        if mask != None:
+            attn_scores += mask                                    # (batch_size, num_heads, sequence_size, sequence_size) += (batch_size, 1, sequence_size, sequence_size)
         else:
             attn_scores += 0
 
@@ -158,21 +158,21 @@ class build_model(nn.Module):
 
     def forward(self, x, mask):
 
-        original_length = mask[1][0, 0, 0, :].long().sum()
+        mask_1, mask_2 = mask
+        last_idx       = mask_2.long()
         
         h = x + self.positional_encoding
 
         for i, layer in enumerate(self.transformer_layers):
             attention_norm_layer, attention_layer, fully_connected_norm_layer, fully_connected_layer = layer
             h_  = attention_norm_layer(h)
-            h   = h + attention_layer(h_, h_, h_, mask)
+            h   = h + attention_layer(h_, h_, h_, mask_1)
             h_  = fully_connected_norm_layer(h)
             h   = h + fully_connected_layer(h_)
             
         h  = self.norm_layer(h)
         
-        last_idx = original_length - 1 
-        h  = h[:, last_idx, :]
+        h  = h[torch.arange(h.size(0)), last_idx, :]
         h  = self.output_linear(h)  
         o  = self.output_activation(h) 
         o  = torch.log(o)
