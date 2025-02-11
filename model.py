@@ -57,7 +57,7 @@ class custom_attn(nn.Module):
         attn_scores = torch.matmul(Q, K.transpose(-2, -1)) / (self.head_size ** 0.5) #  (batch_size, num_heads, sequence_size, head_size) @ (batch_size, num_heads, head_size, sequence_size ) 
         
         if mask != None:
-            attn_scores += mask                                    # (batch_size, num_heads, sequence_size, sequence_size) += (batch_size, 1, sequence_size, sequence_size)
+            attn_scores += mask                   # (batch_size, num_heads, sequence_size, sequence_size) += (batch_size, 1, sequence_size, sequence_size)
         else:
             attn_scores += 0
 
@@ -129,6 +129,9 @@ class build_model(nn.Module):
         ])
         self.norm_layer        = nn.LayerNorm(self.feature_size, elementwise_affine=True) 
         self.output_linear     = nn.Linear(self.feature_size, self.output_size , bias=self.bias)
+        mask                   = torch.full((1, 1, self.sequence_size, self.sequence_size), float("-inf"))
+        mask                   = torch.triu(mask , diagonal=1)
+        self.register_buffer('mask', mask)  
 
         # Activation functions
         self.hidden_activation = self.get_activation(self.hidden_activation)
@@ -156,29 +159,19 @@ class build_model(nn.Module):
         self.loss_function = losses[self.loss .lower()]
 
 
-    def forward(self, x, mask):
-
-        mask_1, mask_2 = mask
-        last_idx       = mask_2.long()
+    def forward(self, x):
         
         h = x + self.positional_encoding
 
         for i, layer in enumerate(self.transformer_layers):
             attention_norm_layer, attention_layer, fully_connected_norm_layer, fully_connected_layer = layer
             h_  = attention_norm_layer(h)
-            h   = h + attention_layer(h_, h_, h_, mask_1)
+            h   = h + attention_layer(h_, h_, h_, self.mask)
             h_  = fully_connected_norm_layer(h)
             h   = h + fully_connected_layer(h_)
             
         h  = self.norm_layer(h)
-        
-        h  = h[torch.arange(h.size(0)), last_idx, :]
-        h  = self.output_linear(h)  
-        o  = self.output_activation(h) 
-        o  = torch.log(o)
-
-        # 這邊我們故意不用  torch.nn.CrossEntropyLoss
-        # 因為 torch.nn.CrossEntropyLoss = softmax + log + negative-likelihood-loss
+        o  = self.output_linear(h)  
         
         return o
 
