@@ -123,7 +123,12 @@ class build_model(nn.Module):
                 nn.LayerNorm(self.feature_size, elementwise_affine=True),
                 custom_attn(self.feature_size, self.num_heads, self.drop_rate, self.bias),
                 nn.LayerNorm(self.feature_size, elementwise_affine=True),
-                nn.Linear(self.feature_size, self.feature_size, bias=self.bias)
+                nn.Sequential(
+                    nn.Linear(self.feature_size, 4 * self.feature_size),
+                    nn.GELU(),
+                    nn.Linear(4 * self.feature_size, self.feature_size),
+                    nn.Dropout(self.drop_rate)
+                )
             ])
             for _ in range(self.num_layers)
         ])
@@ -143,6 +148,7 @@ class build_model(nn.Module):
         # Optimizer
         optimizers = {
             'adam': optim.Adam,
+            'adamw': optim.AdamW,
             'sgd': optim.SGD,
             'rmsprop': optim.RMSprop
         }
@@ -186,14 +192,18 @@ class build_model(nn.Module):
         return pe.unsqueeze(0)  # Shape: (1, sequence_size, feature_size)
 
     def get_activation(self,  activation):
-        activations = {
-            'relu': nn.ReLU(),
-            'leaky_relu': nn.LeakyReLU(),
-            'sigmoid': nn.Sigmoid(),
-            'tanh': nn.Tanh(),
-            'softmax': nn.Softmax(dim=-1)
-        }
-        return activations[ activation.lower()]
+        if activation is not None:
+            activations = {
+                'gelu': nn.GELU(),
+                'relu': nn.ReLU(),
+                'leaky_relu': nn.LeakyReLU(),
+                'sigmoid': nn.Sigmoid(),
+                'tanh': nn.Tanh(),
+                'softmax': nn.Softmax(dim=-1)
+            }
+            return activations[ activation.lower()]
+        else:
+            return None
 
     def initialize_weights(self, initializer):
         initializers = {
@@ -205,6 +215,20 @@ class build_model(nn.Module):
             'xavier_normal': nn.init.xavier_normal_
         }
         initializer = initializers[initializer.lower()]
-        for layer in self.children():
-            if isinstance(layer, nn.Linear):
-                initializer(layer.weight)
+        for module in self.modules():
+            if isinstance(module, nn.Linear):
+                initializer(module.weight)
+                if module.bias is not None:
+                    nn.init.zeros_(module.bias)
+ 
+
+
+
+
+
+
+
+
+
+
+ 
